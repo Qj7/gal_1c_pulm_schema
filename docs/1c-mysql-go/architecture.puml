@@ -1,0 +1,64 @@
+@startuml
+' Первая страница: сразу компоненты. Не вставлять newpage в самое начало только с title.
+skinparam linetype ortho
+title Интеграция: прямой MySQL, REST 1С, микросервис Go\n(обход толстого клиента 1С) — 1. Кто с кем
+
+rectangle "Платформа 1С" as P1C #E8F4FF {
+  rectangle "Приклад 1С" as app1c
+  rectangle "HTTP 1С (REST, OData, HTTP)" as rest1c
+  database "SQL Server / PG\n(БД под 1С)" as db1c
+  app1c -down- rest1c
+  app1c -down- db1c
+}
+
+node "ВМ / сервер с MySQL" as dbhost #FFF8E8 {
+  database "MySQL\n(копия / витрина - уточнить)" as mysql
+  file "Bash\n(прямой SQL / утилиты)" as bash
+  bash -right- mysql : read/write
+}
+
+package "Go микросервис" as goapp #E8FFE8 {
+  rectangle "API + логика" as gapi
+  rectangle "Web UI, фильтры" as ui
+  gapi -up- ui
+}
+
+actor "Оператор" as op
+
+op -down- ui : браузер
+gapi -up- rest1c : HTTP по контракту
+gapi -down- mysql : напрямую
+gapi .right.> bash : оркестрация
+bash .. mysql
+
+note right of gapi
+  <b>Зачем мимо 1С-клиента</b>
+  - нет RDP, тяжелых форм
+  - путь: HTTP + SQL
+  - UI на Go: гибкие отборы
+end note
+
+newpage
+
+rectangle " " as S2 #FFFFFF
+note as COMP
+  <b>Сравнение (качественно)</b>
+  ===============
+  <b>Клиент 1С (толстый)</b>
+  RDP, запуск, UI: человек в цепочке
+  ===============
+  <b>REST 1С</b>
+  Без толстого UI, но движок 1С, пулы, публикация
+  ===============
+  <b>MySQL + Go + bash</b>
+  Минимум прослоек. Риск прямой SQL: согласовать с 1С
+  ===============
+  <b>Итог</b>
+  Экономия там, где был клиент 1С в крит. пути.
+  Целевые цифры: p95 по сценариям.
+end note
+S2 -[hidden] COMP
+
+' Sequence: отдельный файл sequence.puml (тип нельзя смешать newpage+component+sequence)
+
+@enduml

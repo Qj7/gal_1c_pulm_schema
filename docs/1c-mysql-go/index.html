@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1С + MySQL + Go — демо</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        header {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 { color: #333; margin-bottom: 10px; font-size: 2.2em; }
+        .subtitle { color: #666; font-size: 1.1em; margin-bottom: 12px; }
+        .project-info { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+        .info-badge {
+            background: #f0f0f0;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            color: #555;
+        }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab-button {
+            background: white;
+            border: none;
+            padding: 15px 28px;
+            border-radius: 12px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            font-weight: 500;
+        }
+        .tab-button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+        .tab-button.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transform: translateY(-2px);
+        }
+        .diagram-container {
+            display: none;
+            background: white;
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            animation: fadeIn 0.3s ease;
+        }
+        .diagram-container.active { display: block; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .diagram-header { margin-bottom: 18px; padding-bottom: 18px; border-bottom: 2px solid #f0f0f0; }
+        .diagram-header h2 { color: #333; margin-bottom: 10px; font-size: 1.6em; }
+        .diagram-header p { color: #666; line-height: 1.6; }
+        .diagram-content {
+            background: #fafafa;
+            padding: 24px;
+            border-radius: 12px;
+            margin: 16px 0;
+            text-align: center;
+        }
+        .diagram-content img { max-width: 100%; height: auto; border-radius: 8px; }
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 12px;
+            margin-top: 16px;
+        }
+        .feature-card {
+            background: #f8f9fa;
+            padding: 14px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        .feature-card h4 { color: #333; margin-bottom: 6px; font-size: 0.95em; }
+        .feature-card p { color: #666; font-size: 0.88em; line-height: 1.5; }
+        .actions { margin-top: 16px; display: flex; gap: 10px; flex-wrap: wrap; }
+        .action-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 22px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95em;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .action-button:hover { background: #5568d3; transform: translateY(-2px); }
+        .action-button.secondary { background: #6c757d; }
+        .action-button.secondary:hover { background: #5a6268; }
+        footer { text-align: center; color: white; margin-top: 24px; padding: 12px; opacity: 0.9; }
+        @media (max-width: 768px) {
+            h1 { font-size: 1.6em; }
+            .tab-button { padding: 12px 18px; font-size: 0.9em; }
+        }
+        .file-link {
+            background: white;
+            border: 2px solid #667eea;
+            padding: 14px 18px;
+            border-radius: 8px;
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .file-name { font-family: 'Courier New', monospace; color: #667eea; font-weight: bold; }
+        .narrative-block {
+            background: white;
+            border-radius: 16px;
+            padding: 28px 32px 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .narrative-block h2 {
+            color: #222;
+            font-size: 1.25em;
+            font-weight: 600;
+            margin: 1.35em 0 0.55em;
+            letter-spacing: -0.02em;
+        }
+        .narrative-block h2:first-of-type { margin-top: 0; }
+        .narrative-block .lead {
+            color: #333;
+            font-size: 1.05em;
+            line-height: 1.65;
+            margin-bottom: 0.2em;
+        }
+        .narrative-block p {
+            color: #444;
+            line-height: 1.7;
+            margin-bottom: 0.85em;
+            font-size: 0.98em;
+        }
+        .narrative-block ul, .narrative-block ol {
+            color: #444;
+            line-height: 1.65;
+            margin: 0.4em 0 0.9em 1.35em;
+            font-size: 0.98em;
+        }
+        .narrative-block li { margin-bottom: 0.35em; }
+        .narrative-block .muted { color: #666; font-size: 0.92em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>1С + MySQL + Go</h1>
+            <div class="subtitle">Демо: кастомный HTTP-слой на стороне 1С, прямой MySQL, микросервис Go, bash на ноде БД, веб-интерфейс для оператора</div>
+            <div class="project-info">
+                <span class="info-badge">Демо-кейс</span>
+            </div>
+        </header>
+
+        <section class="narrative-block" aria-label="Контекст интеграции">
+            <p class="lead">
+                Рассматриваемый контур сочетает <strong>кастомный HTTP-слой на стороне 1С</strong> (внедрён ранее другими разработчиками; перечень методов, контракт и фактическое состояние — <strong>нуждаются в уточнении с программистами</strong>) с <strong>прямым обращением к MySQL</strong> там, где это согласовано с владельцем данных и ИБ. Толстый клиент 1С уходит с критического пути сценариев, где важны <strong>время отклика, повторяемость и гибкие отборы</strong> в веб-интерфейсе для <strong>оператора</strong>.
+            </p>
+
+            <h2>Назначение</h2>
+            <p>
+                Обеспечить оперативный доступ к данным и операциям по внутренним правилам: операции, которые должны исполняться движком 1С (проводки, статусы, справочники), — через описанный выше HTTP-слой; <strong>аналитические выборки, пакетная обработка и обслуживание витрин</strong> в MySQL — по прямому подключению к СУБД, при необходимости со сценариями на хосте (bash), чтобы снизить сетевую и операционную задержку.
+            </p>
+
+            <h2>Архитектурный подход</h2>
+            <p>
+                <strong>Микросервис на Go</strong> — единая точка входа для веб-интерфейса оператора (фильтры и действия в терминах предметной области) и маршрутизация вызовов: к 1С — когда обязателен движок платформы, к MySQL / bash — когда это допустимо по регламенту. Складывается <strong>гибридная модель</strong>: целостность учёта и прикладной логики в зоне 1С, скорость и UX тяжёлых сценариев — в специализированном сервисе.
+            </p>
+
+            <h2>Ожидаемый эффект</h2>
+            <ul>
+                <li>Меньше задержек за счёт отсутствия RDP и лишних шагов в клиенте 1С там, где достаточно HTTP и SQL.</li>
+                <li>Более предсказуемые сценарии (в т.ч. измерения вроде p95) по согласованным пользовательским цепочкам.</li>
+                <li>Возможность наращивать критерии отбора и представления без ограничений одной типовой формы 1С.</li>
+            </ul>
+
+            <h2>Границы и риски</h2>
+            <p>
+                Запись в данные, с которыми работает 1С, <strong>в обход</strong> её бизнес-логики ведёт к риску рассинхронизации. Допустимый набор операций и таблиц фиксируется в ТЗ; мутации либо через согласованный HTTP-слой 1С, либо по отдельному решению с обратной синхронизацией. Диаграмма sequence задаёт рамку для обсуждения с разработкой, а не заменяет регламент ИБ.
+            </p>
+            <p class="muted">
+                Ниже — схемы (component, две страницы, и sequence). Они иллюстративные; детали контракта с 1С и политика доступа к MySQL уточняются у ответственных разработчиков и владельца ИС.
+            </p>
+        </section>
+
+        <div class="tabs" role="tablist">
+            <button type="button" class="tab-button active" onclick="showDiagram('arch', this)">Платформа и каналы</button>
+            <button type="button" class="tab-button" onclick="showDiagram('sequence', this)">Поток (sequence)</button>
+        </div>
+
+        <div id="diagram-arch" class="diagram-container active" role="tabpanel">
+            <div class="diagram-header">
+                <h2>Кто с кем, где выигрыш по времени</h2>
+                <p>Участники, каналы и сопоставление путей (толстый клиент 1С, HTTP к 1С, прямой MySQL). <code>Component</code>, вторая страница — сравнение. Sequence — <a href="#" onclick="event.preventDefault(); showDiagram('sequence', document.querySelectorAll('.tab-button')[1]);">вторая вкладка</a>.</p>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <h4>HTTP / 1С</h4>
+                        <p>Кастомный слой, вызовы в движок 1С — по согласованному контракту (требует актуализации с разработки).</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>MySQL + bash</h4>
+                        <p>Прямой доступ к СУБД на ноде, без толстого клиента 1С.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>Go</h4>
+                        <p>API, бизнес-логика, веб-интерфейс с отборами.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="diagram-content">
+                <img src="images/architecture.svg" alt="Архитектура" loading="lazy">
+            </div>
+            <div class="file-link">
+                <span class="file-name">architecture.puml</span>
+            </div>
+            <div class="actions">
+                <button type="button" class="action-button" onclick="window.open('https://www.plantuml.com/plantuml/uml/', '_blank')">PlantUML Online</button>
+                <a href="architecture.puml" download class="action-button secondary">Скачать .puml</a>
+            </div>
+        </div>
+
+        <div id="diagram-sequence" class="diagram-container" role="tabpanel">
+            <div class="diagram-header">
+                <h2>Sequence</h2>
+                <p>Типовой сценарий: оператор, Go, 1С, MySQL, bash. Отдельный <code>.puml</code> (в одном многостраничном <code>component</code> нельзя сменить тип на sequence).</p>
+                <div class="features-grid">
+                    <div class="feature-card"><h4>UI → Go</h4><p>HTTP</p></div>
+                    <div class="feature-card"><h4>Go → 1С / MySQL / bash</h4><p>REST и прямые сценарии</p></div>
+                </div>
+            </div>
+            <div class="diagram-content">
+                <img src="images/sequence.svg" alt="Sequence" loading="lazy">
+            </div>
+            <div class="file-link">
+                <span class="file-name">sequence.puml</span>
+            </div>
+            <div class="actions">
+                <button type="button" class="action-button" onclick="window.open('https://www.plantuml.com/plantuml/uml/', '_blank')">PlantUML Online</button>
+                <a href="sequence.puml" download class="action-button secondary">Скачать .puml</a>
+            </div>
+        </div>
+
+        <footer>
+            <p>Актуализация: правки в <code>.puml</code>, экспорт <code>images/*.svg</code> (PlantUML, IDE или <a href="https://www.plantuml.com" style="color: #fff; text-decoration: underline;">plantuml.com</a>).</p>
+        </footer>
+    </div>
+    <script>
+        function showDiagram(diagramId, button) {
+            document.querySelectorAll('.diagram-container').forEach(function (el) { el.classList.remove('active'); });
+            document.querySelectorAll('.tab-button').forEach(function (el) { el.classList.remove('active'); });
+            var panel = document.getElementById('diagram-' + diagramId);
+            if (panel) panel.classList.add('active');
+            if (button) button.classList.add('active');
+        }
+    </script>
+</body>
+</html>

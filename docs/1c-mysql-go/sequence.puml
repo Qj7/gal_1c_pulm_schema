@@ -1,0 +1,27 @@
+@startuml
+title Поток взаимодействия (sequence)
+
+actor "Оператор" as UOp
+participant "Web UI" as UI
+participant "Go" as MS
+participant "REST 1С" as R1C
+database "MySQL" as SQL
+participant "Bash на ноде БД" as SH
+
+UOp -> UI : фильтры, действие
+UI -> MS : HTTP
+MS -> R1C : операции через 1С
+MS -> SQL : выборка/пакет (напрямую)
+MS -> SH : сценарии / пакет у СУБД
+SH -> SQL
+SQL --> MS : данные
+MS --> UI : ответ
+UI --> UOp
+
+note over MS, R1C
+  <b>1С и прямой SQL</b>
+  Подхват 1С правок, сделанных в обход
+  платформы, не гарантируется: зафиксировать
+  в ТЗ (API, регламент, запрещенные таблицы).
+end note
+@enduml
